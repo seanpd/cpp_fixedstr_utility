@@ -280,11 +280,16 @@ void FixedStrTest::testAppend() {
  
 void FixedStrTest::testNonMemberOpers() {
     FixedStr<4> empty;
-    FixedStr<3> foo ("foo");
+    FixedStr<3> foo ("foo");      
     FixedStr<4> foo_2 ("foo");
     FixedStr<10> bar ("bar");
     FixedStr<10> barr ("barr");
     FixedStr<2>  fop  ("fop");
+
+    FixedStr<2>  fopy  ("fopy");
+    FixedStr<2>  fonz  ("fonz");
+
+    FixedStr<2>  fon  ("fon");    
     FixedStr<4>  fooo ("fooo");
     assertTrue  ("operator==",   foo == foo_2);        
     assertFalse ("operator!=",   foo != foo_2);    
@@ -302,8 +307,10 @@ void FixedStrTest::testNonMemberOpers() {
     assertFalse ("operator<", empty < empty);       
     assertFalse ("operator<", foo  < foo);       
     assertFalse ("operator<", foo  < foo_2);       
-    assertTrue  ("operator<", bar   < foo);       
+    assertTrue  ("operator<", bar   < foo);    
     assertTrue  ("operator<", foo  < fop);       
+
+    assertFalse ("operator<", fopy  < fonz);       
 
     assertTrue  ("operator<", empty < foo);       
     assertFalse ("operator<", foo   < empty);       

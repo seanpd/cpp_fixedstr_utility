@@ -273,7 +273,10 @@ namespace {
             va_end (argsHere);
 
         }
-        // Punt        
+        // Punt
+        // Maybe we should throw an exception?  
+        // The trouble is callers may not be prepared to deal with exceptions
+        // vswprintf() and friends return bad status codes.
         *ok = false;
         va_end (argsHold);                        
         return newOverflowAlloc;
@@ -343,12 +346,10 @@ namespace {
             // (by default gcc assumes plain char as signed).
             _UnsignedCharT lhsCh = static_cast<_UnsignedCharT> (*lhs);
             _UnsignedCharT rhsCh = static_cast<_UnsignedCharT> (*rhs);
-            if (lhsCh < rhsCh) {
-                return true;
+            int diff = lhsCh - rhsCh;
+            if (diff != 0) {
+                return diff < 0 ? true : false;
             }
-            if (lhsCh > rhsCh) {
-                return false;
-            }            
             ++lhs;
             ++rhs;
         } // each char.
