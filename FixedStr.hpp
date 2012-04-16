@@ -360,17 +360,31 @@ namespace {
             ++rhsRaw;
         }
         
-        size_t remain = big_loop * sizeof(int);
-        lhs += remain;
-        rhs += remain;
-        for (size_t i=remain; i<lhsLen; ++i) {
-            if (*lhs != *rhs) {
-                return false;
-            }
-            ++lhs;
-            ++rhs;
-        }        
-        return true;
+        size_t offset = big_loop * sizeof(int);
+        size_t remain = lhsLen - offset;
+        lhs += offset;
+        rhs += offset;
+        // assumes an int is 4 chars...
+        switch (remain) {
+            case 3:
+               if (*lhs != *rhs) {
+                  return false;
+               }
+               ++lhs;
+               ++rhs;
+            // intentional case fall-through.
+            case 2:
+               if (*lhs != *rhs) {
+                  return false;
+               }
+               ++lhs;
+               ++rhs;            
+            case 1:
+               if (*lhs != *rhs) {
+                  return false;
+               }
+        }
+        return true;        
     }
 
         

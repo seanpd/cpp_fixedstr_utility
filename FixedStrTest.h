@@ -31,7 +31,7 @@ public:
 
     void runTests() {
         // all tests must be called out here.
-      
+           
         testSizeof();
         testAssign();
         testCtors();
@@ -44,7 +44,7 @@ public:
         testFormat();        
         testSubstring();        
                         
-        testPerf();
+        //testPerf();
         
     }
 

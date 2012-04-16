@@ -515,11 +515,12 @@ void FixedStrTest::testSubstring() {
 
 void FixedStrTest::testPerf() {
 
-    FixedStr<16> foo   ("01234567890123456789");      
-    FixedStr<16> foo_2 ("01234567890123456789");
 
-    //FixedStr<16> foo   ("01234"); 
-    //FixedStr<16> foo_2 ("01234");
+    //FixedStr<16> foo   ("01234567890123456789");      
+    //FixedStr<16> foo_2 ("01234567890123456789");
+
+    FixedStr<16> foo   ("01234"); 
+    FixedStr<16> foo_2 ("01234");
 
     int iters = 260000000;
     time_t start = time(NULL);
