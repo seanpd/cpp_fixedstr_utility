@@ -291,6 +291,7 @@ void FixedStrTest::testNonMemberOpers() {
 
     FixedStr<2>  fon  ("fon");    
     FixedStr<4>  fooo ("fooo");
+        
     assertTrue  ("operator==",   foo == foo_2);        
     assertFalse ("operator!=",   foo != foo_2);    
 
@@ -331,6 +332,41 @@ void FixedStrTest::testNonMemberOpers() {
     WFixedStr<4> wFoo   (L"foo");
     assertTrue("signed test", wFob < wFoo);
         
+}
+
+void FixedStrTest::testEqualStr() {
+    FixedStr<4>  f0 ("012");
+    FixedStr<4>  f1 ("012");
+    FixedStr<4>  f2 ("01z");
+    assertTrue ("equalStr", f0 == f1);
+    assertFalse("equalStr", f0 == f2);
+    
+    FixedStr<4>  f3 ("0123");    
+    FixedStr<4>  f4 ("0123");
+    FixedStr<4>  f5 ("012z");    
+    assertTrue ("equalStr", f3 == f4);
+    assertFalse("equalStr", f3 == f5);
+    
+    
+    FixedStr<4>  f6 ("01234");
+    FixedStr<4>  f7 ("01234");
+    FixedStr<4>  f8 ("0123z");
+    assertTrue ("equalStr", f6 == f7);
+    assertFalse("equalStr", f6 == f8);
+
+
+    FixedStr<4>  f9  ("012345");
+    FixedStr<4>  f10 ("012345");
+    FixedStr<4>  f11 ("01234z");
+    assertTrue ("equalStr", f9 == f10);
+    assertFalse("equalStr", f9 == f11);
+
+    FixedStr<4>  f12 ("012345678");
+    FixedStr<4>  f13 ("012345678");
+    FixedStr<4>  f14 ("01234567z");
+    assertTrue ("equalStr", f12 == f13);
+    assertFalse("equalStr", f12 == f14);
+
 }
 
 void FixedStrTest::testWFixedStr() {
@@ -474,9 +510,26 @@ void FixedStrTest::testSubstring() {
 
     wf1 = L"01234";
     wf1.substring(wf2, 2, 4);
-    assertEquals ("substring-w", L"23", wf2.c_str());
+    assertEquals ("substring-w", L"23", wf2.c_str());        
+}
+
+void FixedStrTest::testPerf() {
+
+    FixedStr<16> foo   ("01234567890123456789");      
+    FixedStr<16> foo_2 ("01234567890123456789");
+
+    //FixedStr<16> foo   ("01234"); 
+    //FixedStr<16> foo_2 ("01234");
+
+    int iters = 260000000;
+    time_t start = time(NULL);
+    for (int i=0; i<iters; ++i) {
+        foo == foo_2;
+    }
+    time_t elapsed = time(NULL) - start;
+    printf("Elapsed: %d; %d iters/ms", elapsed, iters/elapsed/1000);
     
-        
+    
 }
 
 

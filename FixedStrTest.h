@@ -22,13 +22,16 @@ public:
     void testEmbeddedZeroes();
     void testEmbeddedZeroesW();
     void testNonMemberOpers();
+    void testEqualStr();    
     void testWFixedStr();
     void testFormat();
     void testSubstring();
+    void testPerf();
 
 
     void runTests() {
         // all tests must be called out here.
+      
         testSizeof();
         testAssign();
         testCtors();
@@ -36,9 +39,13 @@ public:
         testEmbeddedZeroes();        
         testEmbeddedZeroesW();
         testNonMemberOpers();
+        testEqualStr();        
         testWFixedStr();
         testFormat();        
         testSubstring();        
+                        
+        testPerf();
+        
     }
 
 private:

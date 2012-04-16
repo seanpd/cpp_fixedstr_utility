@@ -16,6 +16,8 @@
 
 namespace {
 
+    size_t g_per_int = sizeof (int) / sizeof (char);
+    
 ////////////////////////
 // We try to put as much logic as possible outside the template.
 // Otherwise we could have massive template bloat.  We don't want
@@ -309,6 +311,7 @@ namespace {
         *overflow = NULL;
     }
 
+    // generic equality comparison.
     template<typename _CharT>
     inline bool isEqualImpl (
                     const _CharT*   lhs, 
@@ -319,6 +322,7 @@ namespace {
         if (lhsLen != rhsLen) {
             return false;
         } 
+        
         for (size_t i=0; i<lhsLen; ++i) {
             if (*lhs != *rhs) {
                 return false;
@@ -328,6 +332,47 @@ namespace {
         }
         return true;                           
     }
+
+    // optimized equality check for char strings.
+    inline bool isEqualImpl_char (
+                    const char*   lhs, 
+                    size_t        lhsLen, 
+                    const char*   rhs, 
+                    size_t        rhsLen) {
+
+        if (lhsLen != rhsLen) {
+            return false;
+        } 
+        
+        const int* lhsRaw = reinterpret_cast<const int*> (lhs);
+        const int* rhsRaw = reinterpret_cast<const int*> (rhs);
+
+        size_t big_loop = lhsLen / g_per_int;
+
+        // Comparing 4 bytes at a time.
+        // This is usually at least twice as fast but could be slower
+        // for comparing short strings due to the extra logic needed.
+        for (size_t i=0; i<big_loop; ++i) {
+            if (*lhsRaw != *rhsRaw) {
+                return false;
+            }
+            ++lhsRaw;
+            ++rhsRaw;
+        }
+        
+        size_t remain = big_loop * sizeof(int);
+        lhs += remain;
+        rhs += remain;
+        for (size_t i=remain; i<lhsLen; ++i) {
+            if (*lhs != *rhs) {
+                return false;
+            }
+            ++lhs;
+            ++rhs;
+        }        
+        return true;
+    }
+
         
     template<typename _CharT, typename _UnsignedCharT>
     inline bool isLessImpl (
@@ -707,6 +752,17 @@ bool operator==(const BaseStr<origAlloc1, _CharT> &lhs,
                 lhs.c_str(), lhs.length(),
                 rhs.c_str(), rhs.length()); 
 }
+
+
+template<size_t origAlloc1, size_t origAlloc2>
+bool operator==(const FixedStr<origAlloc1> &lhs,
+                const FixedStr<origAlloc2> &rhs)
+{
+    return isEqualImpl_char (
+                lhs.c_str(), lhs.length(),
+                rhs.c_str(), rhs.length()); 
+}
+
 
 template<size_t origAlloc1, size_t origAlloc2, typename _CharT>
 bool operator!=(const BaseStr<origAlloc1, _CharT> &lhs,
