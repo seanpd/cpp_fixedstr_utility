@@ -7,6 +7,7 @@
 #include <cstring>
 #include <wchar.h>
 #include <stdexcept>
+#include <limits.h>
 
 /*
  *  FixedStr
@@ -15,8 +16,6 @@
  */
 
 namespace {
-
-    size_t g_per_int = sizeof (int) / sizeof (char);
     
 ////////////////////////
 // We try to put as much logic as possible outside the template.
@@ -333,7 +332,10 @@ namespace {
         return true;                           
     }
 
+#if UINT_MAX == 4294967295 && CHAR_BIT == 8
+
     // optimized equality check for char strings.
+    // Note the assumptions it makes for these sizes.
     inline bool isEqualImpl_char (
                     const char*   lhs, 
                     size_t        lhsLen, 
@@ -347,7 +349,7 @@ namespace {
         const int* lhsRaw = reinterpret_cast<const int*> (lhs);
         const int* rhsRaw = reinterpret_cast<const int*> (rhs);
 
-        size_t big_loop = lhsLen / g_per_int;
+        size_t big_loop = lhsLen / 4;
 
         // Comparing 4 bytes at a time.
         // This is usually at least twice as fast but could be slower
@@ -360,7 +362,7 @@ namespace {
             ++rhsRaw;
         }
         
-        size_t offset = big_loop * sizeof(int);
+        size_t offset = big_loop * 4;
         size_t remain = lhsLen - offset;
         lhs += offset;
         rhs += offset;
@@ -386,7 +388,7 @@ namespace {
         }
         return true;        
     }
-
+#endif
         
     template<typename _CharT, typename _UnsignedCharT>
     inline bool isLessImpl (
@@ -768,6 +770,7 @@ bool operator==(const BaseStr<origAlloc1, _CharT> &lhs,
 }
 
 
+#if UINT_MAX == 4294967295 && CHAR_BIT == 8
 template<size_t origAlloc1, size_t origAlloc2>
 bool operator==(const FixedStr<origAlloc1> &lhs,
                 const FixedStr<origAlloc2> &rhs)
@@ -776,6 +779,7 @@ bool operator==(const FixedStr<origAlloc1> &lhs,
                 lhs.c_str(), lhs.length(),
                 rhs.c_str(), rhs.length()); 
 }
+#endif
 
 
 template<size_t origAlloc1, size_t origAlloc2, typename _CharT>
