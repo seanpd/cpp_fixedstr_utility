@@ -528,7 +528,7 @@ void FixedStrTest::testPerf() {
         foo == foo_2;
     }
     time_t elapsed = time(NULL) - start;
-    printf("Elapsed: %d; %d iters/ms", elapsed, iters/elapsed/1000);
+    printf("Elapsed: %ld; %ld iters/ms", elapsed, iters/elapsed/1000);
     
     
 }

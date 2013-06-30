@@ -519,7 +519,7 @@ public:
     void substring (BaseStr<targetAllocT, _CharT>& target, size_t start, size_t end) {
     
         // TODO:  move this range checking logic outside.
-        if (start < 0 || start >= length()) {
+        if (start >= length()) {
             // I'd prefer not using exceptions here but this seems reasonable.
             throw std::out_of_range("FixedStr.substring() start out of range");
         }
@@ -627,6 +627,7 @@ protected:
 
     // Below we use a union because if we have to use an overflow
     // then m_array is unusable so we can use its space for something else.
+    // TODO:  change so a 16 bit len is outside the union, but the other stuff inside. 
     union {
         // size is fixed; based on int template.
         // +1 to include terminator.
