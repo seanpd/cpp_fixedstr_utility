@@ -172,12 +172,13 @@ namespace {
             realLen += newStrLen;
             target[realLen] = '\0';
         }
-        if (*len == -1) {
+        if (*len == -1 && !newOverflow) {
             delete[] overflowIn;
         }
         if (newOverflow) {
             *len = -1;
             *overflowlenOut = realLen;
+            *overflowOut = target;
         }
         else {
             *len = realLen;
