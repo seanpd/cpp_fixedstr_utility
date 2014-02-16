@@ -37,122 +37,154 @@ namespace {
     // Moved outside to avoid template bloat.
     // returns new overflowAlloc.    
     template<typename _CharT>
-    inline size_t assignImpl (
-    
+    inline void assignImpl (
                     // new string to add.
                     const _CharT*   newStr, 
-                    size_t          newStrLen, 
+                    unsigned int    newStrLen,
                     
                     // sizeof array below
                     size_t          alloc, 
+                    
+                    unsigned int*   len,
                     
                     // fixed allocated array
                     _CharT*         array, 
                     
                     // if too big for 'array', where to store content.
-                    _CharT**        overflow,
+                    _CharT*         overflowIn,
+                    _CharT**        overflowOut,
                     
                     // only access if 'overflow' non null; otherwise it's garbage
                     // due to the union.
-                    size_t          overflowAlloc) {
+                    unsigned int    overflowAllocIn,
+                    unsigned int*   overflowAllocOut,
+                    
+                    unsigned int    overflowLenIn,
+                    unsigned int*   overflowlenOut)
+                {
 
         if (newStrLen == 0) {
+            if (*len == -1) {
+                delete[] overflowIn;
+            }
+            *len = 0;
             // not dereferencing 'newStr' -- allows a null pointer passed in.
             array[0] = '\0';
-            delete[] *overflow;
-            *overflow = NULL;
-            return 0;            
+            return;
         }
         if (newStrLen <= alloc) {
             // fits in the static array.
+            // get rid of existing heap if needed.
+            if (*len == -1) {
+                delete[] overflowIn;
+            }
             memcpy (array, newStr, newStrLen * sizeof (_CharT));
             array[newStrLen] = '\0';
-            
-            // get rid of existing heap if needed.
-            delete[] *overflow;
-            *overflow = NULL;
-            // if array is used, overflowAlloc will be garbage due to union.
-            return 0;
+            *len = newStrLen;
+            return;
         } // fits
         else {
             // too big for static array.
-            if (!*overflow || newStrLen > overflowAlloc) {
+            if (*len != -1 || newStrLen > overflowAllocIn) {
                 // existing alloc too small.
                 // if overflow null, overflowAlloc will have gibberish.
-                delete [] *overflow;
-                // +1:  allow for terminator. 
-                *overflow = new _CharT[newStrLen + 1];
-                overflowAlloc = newStrLen;
+                if (*len == -1) {
+                    delete[] overflowIn;
+                }
+                // +1:  allow for terminator.
+                *overflowOut = new _CharT[newStrLen + 1];
+                *overflowAllocOut = newStrLen;
             }                        
-            memcpy (*overflow, newStr, newStrLen * sizeof (_CharT));
-            (*overflow)[newStrLen] = '\0';                     
-            return overflowAlloc;
+            memcpy (*overflowOut, newStr, newStrLen * sizeof (_CharT));
+            (*overflowOut)[newStrLen] = '\0';
+             *overflowlenOut = newStrLen;
+             *len = -1;
+            return;
         }
         // won't get here.
-        return 0;        
+        return;
     }
     
-    // returns new overflowAlloc.        
     template<typename _CharT>
-    inline size_t appendImpl (
-                    const _CharT*   newStr, 
-                    size_t          newStrLen,  
+    inline void appendImpl (
+                    const _CharT*   newStr,
+                    unsigned int    newStrLen,
+                    size_t          alloc,
                     
-                    // modified.
-                    size_t*         origLen,
-                    size_t          alloc, 
-                    _CharT*         array, 
-                    _CharT**        overflow,
-                    size_t          overflowAlloc) {
+                    unsigned int*   len,
+                    
+                    _CharT*         array,
+                    
+                    _CharT*         overflowIn,
+                    _CharT**        overflowOut,
+                    
+                    unsigned int    overflowAllocIn,
+                    unsigned int*   overflowAllocOut,
+                    
+                    unsigned int    overflowLenIn,
+                    unsigned int*   overflowlenOut) {
 
-        size_t sizeNeeded = *origLen + newStrLen;
-        size_t newOverflowAlloc = 0;
+        unsigned int realLen = *len != -1 ? *len : overflowLenIn;
+        size_t sizeNeeded = realLen + newStrLen;
         _CharT* target = NULL;
+        bool newOverflow = false;
+        
         // not a loop; break out idiom.
         do {
             if (sizeNeeded <= alloc) {
                 // fits in array
-                newOverflowAlloc = 0;
                 target = array;
                 break;
             }
-            if (*overflow && sizeNeeded <= overflowAlloc) {
+            if (*len == -1 && sizeNeeded <= overflowAllocIn) {
                 // fits in existing heap alloc
-                newOverflowAlloc = overflowAlloc;
-                target = *overflow;
+                *overflowAllocOut = overflowAllocIn;
+                target = overflowIn;
+                newOverflow = true;
                 break;
             }
-            size_t expandSz = sizeNeeded*2;
-            if (!*overflow) {
+            unsigned int expandSz = sizeNeeded*2;
+            if (*len != -1) {
                 // existing array but out of space.  Need to use overflow.
                 // +1:  allow for terminator.
-                delete [] *overflow;
-                *overflow = new _CharT[expandSz+1];
+                *overflowOut = new _CharT[expandSz+1];
                 // original terminator isn't copied, because after doing this
                 // it's expected we'll append to the string.
-                memcpy (*overflow, array, *origLen * sizeof (_CharT));
-                newOverflowAlloc = expandSz;
-                target = *overflow;
+                memcpy (*overflowOut, array, realLen * sizeof (_CharT));
+                *overflowAllocOut = expandSz;
+                target = *overflowOut;
+                newOverflow = true;
                 break;
             }
             // existing overflow but out of space.
-            _CharT* newOverflow = new _CharT[expandSz+1];
-            memcpy (newOverflow, *overflow, *origLen * sizeof (_CharT));
-            delete [] *overflow;
-            *overflow = newOverflow;
-            newOverflowAlloc = expandSz;
-            target = *overflow;                    
+            _CharT* overflowNew = new _CharT[expandSz+1];
+            memcpy (overflowNew, overflowIn, realLen * sizeof (_CharT));
+            delete [] overflowIn;
+            *overflowOut = overflowNew;
+            *overflowAllocOut = expandSz;
+            target = *overflowOut;
+            newOverflow = true;
         } while (false);
         
         // if 'newStrLen' 0 not dereferencing 'newStr' -- allows a null pointer passed in.          
         if (newStrLen > 0) {
-            memcpy(target + *origLen, newStr, newStrLen * sizeof (_CharT));
-            *origLen += newStrLen;        
-            target[*origLen] = '\0';            
-        }                                        
-        return newOverflowAlloc;    
+            memcpy(target + realLen, newStr, newStrLen * sizeof (_CharT));
+            realLen += newStrLen;
+            target[realLen] = '\0';
+        }
+        if (*len == -1) {
+            delete[] overflowIn;
+        }
+        if (newOverflow) {
+            *len = -1;
+            *overflowlenOut = realLen;
+        }
+        else {
+            *len = realLen;
+        }
     }
-        
+
+/*
     // returns new overflowAlloc.    
     inline size_t formatImpl (
                     const char*     formatStr, 
@@ -282,6 +314,7 @@ namespace {
         va_end (argsHold);                        
         return newOverflowAlloc;
     }
+*/
 
     // generic strlen()-type function.
     template<typename _CharT>
@@ -297,18 +330,6 @@ namespace {
        }
        return len;                      
     } 
-
-    template<typename _CharT>
-    void clearImpl(
-            size_t*     len,
-            _CharT*     array,
-            _CharT**    overflow) {
-
-        *len = 0;
-        array[0] = '\0';
-        delete [] *overflow;
-        *overflow = NULL;
-    }
 
     // generic equality comparison.
     template<typename _CharT>
@@ -541,27 +562,38 @@ public:
     /////////////////////////////////
     
     void clear() {
-        clearImpl (&m_len, m_array, &m_overflow);
+        if (m_len == -1) {
+            delete [] m_overflow;
+        }
+        m_len = 0;
+        m_array[0] = '\0';
     }
     
     void assign (const _CharT* newStr, size_t newStrLen) {
-    
-        // can't refer to both m_array and m_overflowAlloc due to union.
-        // note how we avoid dereferencing m_overflowAlloc.
-        size_t newOverflowAlloc = 
-                    assignImpl (
+        
+        _CharT*         overflowOut      = NULL;
+        unsigned int    overflowAllocOut = 0;
+        unsigned int    overflowLenOut   = 0;
+        
+        // note how we avoid dereferencing m_overflowX in the union.
+        assignImpl (
                         newStr, 
                         newStrLen,
-                        _AllocSizeT, 
+                        _AllocSizeT,
+                        &m_len,
                         m_array,
-                        &m_overflow, 
-                        m_overflowAlloc);
+                        m_overflow,
+                        &overflowOut,
+                        m_overflowAlloc,
+                        &overflowAllocOut,
+                        m_overFlowLen,
+                        &overflowLenOut);
 
-        if (newOverflowAlloc != 0) {
-            // If it returns non-zero we're using the heap.
-            m_overflowAlloc = newOverflowAlloc;
+        if (m_len == -1) {
+            m_overflow =      overflowOut;
+            m_overflowAlloc = overflowAllocOut;
+            m_overFlowLen =   overflowLenOut;
         }
-        m_len = newStrLen;        
     }
     
     void assign (const _CharT* newStr) {
@@ -569,18 +601,28 @@ public:
     }
       
     BaseStr<_AllocSizeT, _CharT>&  append(const _CharT* newStr, size_t newStrLen) {
-        size_t newOverflowAlloc = appendImpl(
-                    newStr,
-                    newStrLen,
-                    &m_len,
-                    _AllocSizeT, 
-                    m_array,
-                    &m_overflow, 
-                    m_overflowAlloc);
+    
+        _CharT*         overflowOut      = NULL;
+        unsigned int    overflowAllocOut = 0;
+        unsigned int    overflowLenOut   = 0;
 
-        if (newOverflowAlloc != 0) {
-            // If it returns non-zero we're using the heap.
-            m_overflowAlloc = newOverflowAlloc;
+        appendImpl (
+                        newStr, 
+                        newStrLen,
+                        _AllocSizeT,
+                        &m_len,
+                        m_array,
+                        m_overflow,
+                        &overflowOut,
+                        m_overflowAlloc,
+                        &overflowAllocOut,
+                        m_overFlowLen,
+                        &overflowLenOut);
+
+        if (m_len == -1) {
+            m_overflow =      overflowOut;
+            m_overflowAlloc = overflowAllocOut;
+            m_overFlowLen =   overflowLenOut;
         }
         return *this;
     }
@@ -617,27 +659,56 @@ public:
                 
 protected:
 
-    // Used so we don't need to strlen()...
     // Doesn't include terminator.
-    size_t           m_len;
+    // If -1 the overflow is used; otherwise the m_array is used.
+    unsigned int  m_len;
     
-    // If heap was needed it goes here...
-    // If null, then m_array is valid.  Otherwise m_overflowAlloc is valid.
-     _CharT*         m_overflow;
-
     // Below we use a union because if we have to use an overflow
     // then m_array is unusable so we can use its space for something else.
-    // TODO:  change so a 16 bit len is outside the union, but the other stuff inside. 
     union {
         // size is fixed; based on int template.
         // +1 to include terminator.
          _CharT          m_array [_AllocSizeT+1];
+        struct {
         
-        // If heap was needed; alloc size.  Real alloc size +1 to account for terminator.
-        size_t           m_overflowAlloc;        
+            // If heap was needed it goes here...
+            _CharT*         m_overflow;
+        
+            // If heap was needed; alloc size.  Real alloc size +1 to account for terminator.
+            unsigned int    m_overflowAlloc;
+            
+            // Needed becaause m_len would be -1.
+            unsigned int    m_overFlowLen;
+        };
     };
     
 }; // end class.
+
+class SizeTest {
+public:
+  int m_len;
+  union {
+    // 16 -> 17 bumps sizeof 24 -> 32
+    char m_array[2];
+    struct {
+      char* m_overflow;
+      int   m_overFlowLen;
+      int   m_overflowAlloc;
+    };
+  };
+};
+
+// Similar to orig.
+class SizeTest2 {
+  int m_len;
+  char* m_overflow;
+  union {
+    // 8 -> 9 bumps sizeof 24 -> 32
+    char m_array[2];
+    int   m_overflowAlloc;
+  };
+};
+
 
 
 ////////////////////

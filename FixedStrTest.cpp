@@ -16,10 +16,30 @@ using std::endl;
 
 void FixedStrTest::testSizeof() {
 
-    FixedStr<5> f1;
+    // OS X 64-bit sizeofs:
+    //   int:       4
+    //   size_t:    8
+    //   pointers:  8
+
+    SizeTest sizeTest;
+    cout << "sizeof SizeTest: " << sizeof sizeTest << endl;
+    sizeTest.m_array;
+    sizeTest.m_overflow;
+    sizeTest.m_overFlowLen;
+
+
+    SizeTest2 sizeTest2;
+    cout << "sizeof SizeTest2: " << sizeof sizeTest2 << endl;
+
+    size_t foo = 0;
+    cout << "sizeof foo: " << sizeof foo << endl;
+
+    FixedStr<2> f1;
     int sz = 0;
 
     // 16.  (8 for int members + 8 for array, padded)
+    // 24 on OS X 64-bit.  (16 for int members + 8 for array, padded)
+
     sz = sizeof f1;
     cout << "sizeof f1: " << sz << endl;
 
@@ -308,7 +328,7 @@ void FixedStrTest::testNonMemberOpers() {
     assertFalse ("operator<", empty < empty);       
     assertFalse ("operator<", foo  < foo);       
     assertFalse ("operator<", foo  < foo_2);       
-    assertTrue  ("operator<", bar   < foo);    
+    assertTrue  ("operator<", bar   < foo);
     assertTrue  ("operator<", foo  < fop);       
 
     assertFalse ("operator<", fopy  < fonz);       
@@ -430,6 +450,8 @@ void FixedStrTest::testWFixedStr() {
 }
 
 void FixedStrTest::testFormat() {
+
+/*
     typedef FixedStr<12> fstr_t;
     fstr_t s1;
     bool ok = s1.format("foo: %d-%s", 5, "abc");
@@ -470,7 +492,7 @@ void FixedStrTest::testFormat() {
     ws2.format(L"%S", L"01234567890123456789");
     assertEquals ("format-7", L"01234567890123456789", ws2.c_str());
     assertTrue("overflow", ws2.isUsingOverflow());
-        
+*/        
 }
 
 void FixedStrTest::testSubstring() {
