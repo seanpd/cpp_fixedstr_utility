@@ -451,7 +451,6 @@ void FixedStrTest::testWFixedStr() {
 
 void FixedStrTest::testFormat() {
 
-/*
     typedef FixedStr<12> fstr_t;
     fstr_t s1;
     bool ok = s1.format("foo: %d-%s", 5, "abc");
@@ -473,6 +472,7 @@ void FixedStrTest::testFormat() {
     assertEquals ("format-4", "0123456789012", s1.c_str());
     assertTrue("overflow", s1.isUsingOverflow());
 
+/*
     // wchar_t, at the limit
     WFixedStr<5> ws1;
     ws1.format(L"%S", L"01234");

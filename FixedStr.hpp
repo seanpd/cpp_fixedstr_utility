@@ -60,13 +60,10 @@ namespace {
                     unsigned int*   overflowAllocOut,
                     
                     unsigned int    overflowLenIn,
-                    unsigned int*   overflowlenOut)
-                {
+                    unsigned int*   overflowlenOut) {
 
         if (newStrLen == 0) {
-            if (*len == -1) {
-                delete[] overflowIn;
-            }
+            if (*len == -1) delete[] overflowIn;
             *len = 0;
             // not dereferencing 'newStr' -- allows a null pointer passed in.
             array[0] = '\0';
@@ -75,9 +72,7 @@ namespace {
         if (newStrLen <= alloc) {
             // fits in the static array.
             // get rid of existing heap if needed.
-            if (*len == -1) {
-                delete[] overflowIn;
-            }
+            if (*len == -1) delete[] overflowIn;
             memcpy (array, newStr, newStrLen * sizeof (_CharT));
             array[newStrLen] = '\0';
             *len = newStrLen;
@@ -88,9 +83,7 @@ namespace {
             if (*len != -1 || newStrLen > overflowAllocIn) {
                 // existing alloc too small.
                 // if overflow null, overflowAlloc will have gibberish.
-                if (*len == -1) {
-                    delete[] overflowIn;
-                }
+                if (*len == -1) delete[] overflowIn;
                 // +1:  allow for terminator.
                 *overflowOut = new _CharT[newStrLen + 1];
                 *overflowAllocOut = newStrLen;
@@ -172,9 +165,7 @@ namespace {
             realLen += newStrLen;
             target[realLen] = '\0';
         }
-        if (*len == -1 && !newOverflow) {
-            delete[] overflowIn;
-        }
+        if (*len == -1 && !newOverflow) delete[] overflowIn;
         if (newOverflow) {
             *len = -1;
             *overflowlenOut = realLen;
@@ -185,33 +176,35 @@ namespace {
         }
     }
 
-/*
-    // returns new overflowAlloc.    
-    inline size_t formatImpl (
+    inline void formatImpl (
                     const char*     formatStr, 
-                    va_list         *args,     
-                    size_t*         origLen,
-                    size_t          alloc, 
-                    char*           array, 
-                    char**          overflow,
-                    size_t          overflowAlloc,
+                    va_list         *args,
+                    size_t          alloc,
                     
-                    // returned.  (I could have used a ref but this
-                    // may be more clear)
-                    bool*           ok) {
+                    unsigned int*   len,
+                    
+                    char*           array,
+                    
+                    char*           overflowIn,
+                    char**          overflowOut,
+                    
+                    unsigned int    overflowAllocIn,
+                    unsigned int*   overflowAllocOut,
+                    
+                    unsigned int    overflowLenIn,
+                    unsigned int*   overflowlenOut,
+                    bool*           okOut) {
 
-        *ok = false;
-        size_t newOverflowAlloc = 0;
+        *okOut = false;
         char*  buff;
         size_t buffAlloc;
-        if (!*overflow) {
+        if (*len != -1) {
             buff =      array;
             buffAlloc = alloc;
         }
         else {
-            buff =             *overflow;
-            buffAlloc =        overflowAlloc;
-            newOverflowAlloc = overflowAlloc;
+            buff =      overflowIn;
+            buffAlloc = overflowAllocIn;
         }
         // alloc+1:  we already have space for the null terminator.
         va_list argsHold;
@@ -219,30 +212,34 @@ namespace {
         my_va_copy (argsHold, *args);
         int required = vsnprintf (buff, buffAlloc+1, formatStr, *args);
         if (required < 0) {
-            // error.
+            // error
             va_end (argsHold);
-            return newOverflowAlloc;
+            return;
         }
-        if (required > alloc) {
-            // It didn't fit.                        
+        if (required <= alloc) {
+            // it fit ok.
+            *len = required;
+        }
+        else {
+            // It didn't fit.
             // This shouldn't be a common use case.
-            // don't use asprintf() -- not standard.  
-            delete [] *overflow;                      
-            *overflow = new char[required+1];
-            newOverflowAlloc = required;
-            buff = *overflow;
+            // don't use asprintf() -- not standard.
+            if (*len == -1) delete [] overflowIn;
+            *overflowOut = new char[required+1];
+            *overflowAllocOut = required;
+            *overflowlenOut = required;
+            buff = *overflowOut;
             int res = vsnprintf (buff, required+1, formatStr, argsHold);
             if (res < 0) {
                 va_end (argsHold);
-                return newOverflowAlloc;
-            }                    
-        }    
-        *origLen = required;
-        *ok = true;
-        va_end (argsHold);        
-        return newOverflowAlloc;
+                return;
+            }
+            *len = -1;
+        }
+        *okOut = true;
     }
 
+/**
     // returns new overflowAlloc.    
     inline size_t wideFormatImpl (
                     const wchar_t*  formatStr, 
@@ -752,20 +749,29 @@ public:
         va_list args;
         va_start(args, formatStr);    
         bool ok = false;            
-        size_t newOverflowAlloc = formatImpl(
-                    formatStr,
-                    &args,
-                    &(this->m_len),
-                    _AllocSizeT, 
-                    this->m_array,
-                    &(this->m_overflow), 
-                    this->m_overflowAlloc,
-                    &ok);
+        char*           overflowOut      = NULL;
+        unsigned int    overflowAllocOut = 0;
+        unsigned int    overflowLenOut   = 0;
 
-        if (newOverflowAlloc != 0) {
-            // If it returns non-zero we're using the heap.
-            this->m_overflowAlloc = newOverflowAlloc;
-        }  
+        formatImpl (
+                        formatStr,
+                        &args,
+                        _AllocSizeT,
+                        &(this->m_len),
+                        this->m_array,
+                        this->m_overflow,
+                        &overflowOut,
+                        this->m_overflowAlloc,
+                        &overflowAllocOut,
+                        this->m_overflowLen,
+                        &overflowLenOut,
+                        &ok);
+
+        if (this->m_len == -1) {
+            this->m_overflow =      overflowOut;
+            this->m_overflowAlloc = overflowAllocOut;
+            this->m_overflowLen =   overflowLenOut;
+        }
         va_end (args);
         return ok;
     }
@@ -820,8 +826,7 @@ public:
         }  
         va_end(args);
         return ok;
-    }
-                            
+    }                            
 };  
 
 //////////////////////////
