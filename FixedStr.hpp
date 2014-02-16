@@ -460,9 +460,7 @@ public:
     /////////////////////////
     BaseStr () 
         :
-        m_len(0),
-        m_overflow(NULL) {
-        
+        m_len(0) {
         m_array[0] = '\0';
     }
 
@@ -471,21 +469,18 @@ public:
     template<size_t newAllocT>
     BaseStr (const BaseStr<newAllocT, _CharT>& newStr)
         :
-        m_len(0),
-        m_overflow(NULL) {
-        
+        m_len(0) {
         assign (newStr.c_str(), newStr.length());
     }
 
     explicit BaseStr (const _CharT* newStr)
         :
-        m_len(0),
-        m_overflow(NULL) {
+        m_len(0) {
         assign (newStr);
     }
 
     ~BaseStr() {
-        delete [] m_overflow;
+        if (m_len == -1) delete [] m_overflow;
     }
 
     // assigning same-alloc strings; also detects self-assignment
@@ -515,11 +510,11 @@ public:
     // accessors
     /////////////////////////////////
     const  _CharT* c_str() const {
-        return m_overflow ? m_overflow : m_array; 
+        return  m_len != -1 ? m_array : m_overflow;
     }
 
     size_t length() const {
-        return m_len;
+        return m_len != -1 ? m_len : m_overflowLen;
     }
 
     bool empty() const {
@@ -527,11 +522,11 @@ public:
     }
 
     bool isUsingOverflow() const {
-        return m_overflow;
+        return m_len == -1;
     }
 
-    size_t getAlloc() const {    
-        return m_overflow ? m_overflowAlloc : _AllocSizeT;
+    size_t getAlloc() const {
+        return m_len != -1 ?  _AllocSizeT : m_overflowAlloc;
     }
   
     // Returned value is passed into 'target' (ref parameter) instead of 
@@ -586,13 +581,13 @@ public:
                         &overflowOut,
                         m_overflowAlloc,
                         &overflowAllocOut,
-                        m_overFlowLen,
+                        m_overflowLen,
                         &overflowLenOut);
 
         if (m_len == -1) {
             m_overflow =      overflowOut;
             m_overflowAlloc = overflowAllocOut;
-            m_overFlowLen =   overflowLenOut;
+            m_overflowLen =   overflowLenOut;
         }
     }
     
@@ -616,13 +611,13 @@ public:
                         &overflowOut,
                         m_overflowAlloc,
                         &overflowAllocOut,
-                        m_overFlowLen,
+                        m_overflowLen,
                         &overflowLenOut);
 
         if (m_len == -1) {
             m_overflow =      overflowOut;
             m_overflowAlloc = overflowAllocOut;
-            m_overFlowLen =   overflowLenOut;
+            m_overflowLen =   overflowLenOut;
         }
         return *this;
     }
@@ -678,7 +673,7 @@ protected:
             unsigned int    m_overflowAlloc;
             
             // Needed becaause m_len would be -1.
-            unsigned int    m_overFlowLen;
+            unsigned int    m_overflowLen;
         };
     };
     
