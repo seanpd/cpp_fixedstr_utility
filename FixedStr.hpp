@@ -45,12 +45,16 @@ namespace {
                     // sizeof array below
                     size_t          alloc, 
                     
+                    // Length, or -1 if overflow used.  Updated.
                     unsigned int*   len,
                     
                     // fixed allocated array
                     _CharT*         array, 
                     
                     // if too big for 'array', where to store content.
+                    // Because of the union, separate args for in and out are used instead
+                    // of a pointer.  (If the array is used on the union everything else
+                    // is garbage.
                     _CharT*         overflowIn,
                     _CharT**        overflowOut,
                     
@@ -82,7 +86,6 @@ namespace {
             // too big for static array.
             if (*len != -1 || newStrLen > overflowAllocIn) {
                 // existing alloc too small.
-                // if overflow null, overflowAlloc will have gibberish.
                 if (*len == -1) delete[] overflowIn;
                 // +1:  allow for terminator.
                 *overflowOut = new _CharT[newStrLen + 1];
@@ -91,6 +94,7 @@ namespace {
             memcpy (*overflowOut, newStr, newStrLen * sizeof (_CharT));
             (*overflowOut)[newStrLen] = '\0';
              *overflowlenOut = newStrLen;
+             // The -1 indicates that the overflow is used.
              *len = -1;
             return;
         }
@@ -139,23 +143,22 @@ namespace {
             unsigned int expandSz = sizeNeeded*2;
             if (*len != -1) {
                 // existing array but out of space.  Need to use overflow.
+                // We need to copy the existing content to the new space.
+                // (but the appended portion occurs below)
                 // +1:  allow for terminator.
-                *overflowOut = new _CharT[expandSz+1];
+                target = new _CharT[expandSz+1];
                 // original terminator isn't copied, because after doing this
                 // it's expected we'll append to the string.
-                memcpy (*overflowOut, array, realLen * sizeof (_CharT));
+                memcpy (target, array, realLen * sizeof (_CharT));
                 *overflowAllocOut = expandSz;
-                target = *overflowOut;
                 newOverflow = true;
                 break;
             }
             // existing overflow but out of space.
-            _CharT* overflowNew = new _CharT[expandSz+1];
-            memcpy (overflowNew, overflowIn, realLen * sizeof (_CharT));
+            target  = new _CharT[expandSz+1];
+            memcpy (target, overflowIn, realLen * sizeof (_CharT));
             delete [] overflowIn;
-            *overflowOut = overflowNew;
             *overflowAllocOut = expandSz;
-            target = *overflowOut;
             newOverflow = true;
         } while (false);
         
