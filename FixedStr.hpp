@@ -308,7 +308,7 @@ namespace {
         }
         
         // TODO:  If something like _vscwprintf is available, take advantage of it.
-        size_t maxIters = 4;
+        size_t maxIters = 8;
         wchar_t* overflowNew = NULL;
         for (size_t i = 0; i < maxIters; ++i) {
             // Keep trying a bigger buffer until it fits.
