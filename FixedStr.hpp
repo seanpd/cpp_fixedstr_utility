@@ -223,10 +223,11 @@ namespace {
             }
             else {
                 // went into exising overflow.
+                // This will occur even if the new string will fit in the array.
+                // (might consider fixing)
                 *len = -1;
                 *overflowOut = overflowIn;
                 *overflowAllocOut = overflowAllocIn;
-                *overflowOut = overflowIn;
                 *overflowlenOut = required;
             }
         }
@@ -247,10 +248,10 @@ namespace {
             *overflowAllocOut = required;
             *overflowlenOut = required;
         }
+        va_end (argsHold);
         return true;
     }
 
-/*
     inline bool wideFormatImpl (
                     const wchar_t*     formatStr,
                     va_list         *args,
@@ -279,9 +280,61 @@ namespace {
             buff =      overflowIn;
             buffAlloc = overflowAllocIn;
         }
-*/
-
-
+        va_list argsHold;
+        my_va_copy (argsHold, *args);
+        
+        // alloc+1:  we already have space for the null terminator.
+        // Unlike vsnprintf() this returns -1 if it doesn't fit in
+        // the buffer (not the count needed).              
+        int result = vswprintf (buff, buffAlloc+1, formatStr, *args);
+        if (result >= 0) {
+            if (*len != -1) {
+                // went into existing array.
+                *len = result;
+            }
+            else {
+                // went into exising overflow.
+                // This will occur even if the new string will fit in the array.
+                // (might consider fixing)
+                *len = -1;
+                *overflowOut = overflowIn;
+                *overflowAllocOut = overflowAllocIn;
+                *overflowlenOut = result;
+            }
+            return true;
+        }
+        
+        // TODO:  If something like _vscwprintf is available, take advantage of it.
+        size_t maxIters = 4;
+        wchar_t* overflowNew = NULL;
+        for (size_t i = 0; i < maxIters; ++i) {
+            // Keep trying a bigger buffer until it fits.
+            // Inelegant but this is really abusing the purpose of this class.
+            buffAlloc *= 2;
+            delete [] overflowNew;
+            overflowNew = new wchar_t[buffAlloc+1];
+            
+            va_list argsHere;
+            my_va_copy (argsHere, argsHold);            
+            int result = vswprintf (overflowNew, buffAlloc+1, formatStr, argsHere);
+            if (result >= 0) {
+                if (*len == -1) delete[] overflowIn;
+                *len = -1;
+                *overflowOut = overflowNew;
+                *overflowAllocOut = buffAlloc;
+                *overflowlenOut = result;
+                va_end (argsHere);
+                return true;
+            }                            
+            va_end (argsHere);
+        }
+        // Punt; return; false; don't throw an exception.
+        // The trouble is callers may not be prepared to deal with exceptions
+        // vswprintf() and friends return bad status codes.
+        va_end (argsHold);
+        return false;
+    }
+        
 /**
     // returns new overflowAlloc.    
     inline size_t wideFormatImpl (
@@ -849,25 +902,32 @@ public:
     
     bool format (const wchar_t* formatStr, ...) {
         va_list args;
-        va_start(args, formatStr);                    
-        bool ok = false;            
-        size_t newOverflowAlloc = wideFormatImpl(
-                    formatStr,
-                    &args,
-                    &(this->m_len),
-                    _AllocSizeT, 
-                    this->m_array,
-                    &(this->m_overflow), 
-                    this->m_overflowAlloc,
-                    &ok);
+        va_start(args, formatStr);    
+        wchar_t*        overflowOut      = NULL;
+        unsigned int    overflowAllocOut = 0;
+        unsigned int    overflowLenOut   = 0;
 
-        if (newOverflowAlloc != 0) {
-            // If it returns non-zero we're using the heap.
-            this->m_overflowAlloc = newOverflowAlloc;
-        }  
-        va_end(args);
+        bool ok = wideFormatImpl (
+                        formatStr,
+                        &args,
+                        _AllocSizeT,
+                        &(this->m_len),
+                        this->m_array,
+                        this->m_overflow,
+                        &overflowOut,
+                        this->m_overflowAlloc,
+                        &overflowAllocOut,
+                        this->m_overflowLen,
+                        &overflowLenOut);
+
+        if (ok && this->m_len == -1) {
+            this->m_overflow =      overflowOut;
+            this->m_overflowAlloc = overflowAllocOut;
+            this->m_overflowLen =   overflowLenOut;
+        }
+        va_end (args);
         return ok;
-    }                            
+    }
 };  
 
 //////////////////////////

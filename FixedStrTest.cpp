@@ -487,8 +487,6 @@ void FixedStrTest::testFormat() {
     assertEquals ("format-6", "abc", s1.c_str());
     assertFalse("overflow", s1.isUsingOverflow());
 
-
-/*
     // wchar_t, at the limit
     WFixedStr<5> ws1;
     ws1.format(L"%S", L"01234");
@@ -503,12 +501,11 @@ void FixedStrTest::testFormat() {
     assertEquals ("format-7", L"0123456", ws1.c_str());
     assertTrue("overflow", ws1.isUsingOverflow());
 
-    // Multiple iterations of trying to allocate.
+    // Multiple iterations trying to allocate.
     WFixedStr<4> ws2;
     ws2.format(L"%S", L"01234567890123456789");
     assertEquals ("format-7", L"01234567890123456789", ws2.c_str());
     assertTrue("overflow", ws2.isUsingOverflow());
-*/        
 }
 
 void FixedStrTest::testSubstring() {
