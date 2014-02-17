@@ -335,81 +335,6 @@ namespace {
         return false;
     }
         
-/**
-    // returns new overflowAlloc.    
-    inline size_t wideFormatImpl (
-                    const wchar_t*  formatStr, 
-                    va_list         *args,     
-                    size_t*         origLen,
-                    size_t          alloc, 
-                    wchar_t*        array, 
-                    wchar_t**       overflow,
-                    size_t          overflowAlloc,                    
-                    bool*           ok) {
-
-        *ok = false;
-        size_t newOverflowAlloc = 0;
-        wchar_t*  buff;
-        size_t    buffAlloc;
-        if (!*overflow) {
-            buff =      array;
-            buffAlloc = alloc;
-        }
-        else {
-            buff =             *overflow;
-            buffAlloc =        overflowAlloc;
-            newOverflowAlloc = overflowAlloc;
-        }
-        
-        va_list argsHold;
-        my_va_copy (argsHold, *args);
-        
-        // alloc+1:  we already have space for the null terminator.
-        // Unlike vsnprintf() this returns -1 if it doesn't fit in
-        // the buffer (not the count needed).              
-        int result = vswprintf (buff, buffAlloc+1, formatStr, *args);
-        if (result >= 0) {            
-            *origLen = result;
-            *ok = true;
-            va_end (argsHold);
-            // good result.
-            return newOverflowAlloc;
-        }
-        // TODO:  If something like _vscwprintf is available, take advantage of it.
-        size_t maxIters = 4;
-        
-        for (size_t i = 0; i < maxIters; ++i) {
-            // Keep trying a bigger buffer until it fits.
-            // Inelegant but this is really abusing the purpose of this class.
-            buffAlloc *= 2;
-            delete [] *overflow;                      
-            *overflow = new wchar_t[buffAlloc+1];
-            newOverflowAlloc = buffAlloc;
-            buff = *overflow;
-            
-            va_list argsHere;
-            my_va_copy (argsHere, argsHold);            
-            int result = vswprintf (buff, buffAlloc+1, formatStr, argsHere);
-            if (result >= 0) {            
-                *origLen = result;
-                *ok = true;
-                va_end (argsHere);
-                va_end (argsHold);                
-                return newOverflowAlloc;
-            }                            
-            va_end (argsHere);
-
-        }
-        // Punt
-        // Maybe we should throw an exception?  
-        // The trouble is callers may not be prepared to deal with exceptions
-        // vswprintf() and friends return bad status codes.
-        *ok = false;
-        va_end (argsHold);                        
-        return newOverflowAlloc;
-    }
-*/
-
     // generic strlen()-type function.
     template<typename _CharT>
     inline size_t countLen (
@@ -747,7 +672,7 @@ public:
     }
                 
 protected:
-
+    // 16 -> 17 bumps sizeof 24 -> 32
     // Doesn't include terminator.
     // If -1 the overflow is used; otherwise the m_array is used.
     unsigned int  m_len;
@@ -772,33 +697,6 @@ protected:
     };
     
 }; // end class.
-
-class SizeTest {
-public:
-  int m_len;
-  union {
-    // 16 -> 17 bumps sizeof 24 -> 32
-    char m_array[2];
-    struct {
-      char* m_overflow;
-      int   m_overFlowLen;
-      int   m_overflowAlloc;
-    };
-  };
-};
-
-// Similar to orig.
-class SizeTest2 {
-  int m_len;
-  char* m_overflow;
-  union {
-    // 8 -> 9 bumps sizeof 24 -> 32
-    char m_array[2];
-    int   m_overflowAlloc;
-  };
-};
-
-
 
 ////////////////////
 // Subclasses for the specific string types.

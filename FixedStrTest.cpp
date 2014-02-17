@@ -21,16 +21,6 @@ void FixedStrTest::testSizeof() {
     //   size_t:    8
     //   pointers:  8
 
-    SizeTest sizeTest;
-    cout << "sizeof SizeTest: " << sizeof sizeTest << endl;
-    sizeTest.m_array;
-    sizeTest.m_overflow;
-    sizeTest.m_overFlowLen;
-
-
-    SizeTest2 sizeTest2;
-    cout << "sizeof SizeTest2: " << sizeof sizeTest2 << endl;
-
     size_t foo = 0;
     cout << "sizeof foo: " << sizeof foo << endl;
 
@@ -451,6 +441,10 @@ void FixedStrTest::testWFixedStr() {
 
 void FixedStrTest::testFormat() {
 
+    //////////////
+    // standard strings
+    //////////////
+
     typedef FixedStr<12> fstr_t;
     fstr_t s1;
     bool ok = s1.format("foo: %d-%s", 5, "abc");
@@ -487,6 +481,10 @@ void FixedStrTest::testFormat() {
     assertEquals ("format-6", "abc", s1.c_str());
     assertFalse("overflow", s1.isUsingOverflow());
 
+    //////////////
+    // wide strings (use own formatting code so needs separate tests)
+    //////////////
+
     // wchar_t, at the limit
     WFixedStr<5> ws1;
     ws1.format(L"%S", L"01234");
@@ -497,14 +495,31 @@ void FixedStrTest::testFormat() {
     assertEquals ("format-6", L"012345", ws1.c_str());
     assertTrue("overflow", ws1.isUsingOverflow());
 
+    // Fits in existing allocation above.
     ws1.format(L"%S", L"0123456");
     assertEquals ("format-7", L"0123456", ws1.c_str());
     assertTrue("overflow", ws1.isUsingOverflow());
 
+    // Overflow needs to be expanded.
+    ws1.format(L"%S", L"01234567891");
+    assertEquals ("format-8", L"01234567891", ws1.c_str());
+    assertTrue("overflow", ws1.isUsingOverflow());
+
+    // fits in array , but for now it goes in overflow.
+    ws1.format(L"%S", L"abc");
+    assertEquals ("format-9", L"abc", ws1.c_str());
+    assertTrue("overflow", ws1.isUsingOverflow());
+
+    // This should go in array.
+    ws1.clear();
+    ws1.format(L"%S", L"abc");
+    assertEquals ("format-10", L"abc", ws1.c_str());
+    assertFalse("overflow", ws1.isUsingOverflow());
+
     // Multiple iterations trying to allocate.
     WFixedStr<4> ws2;
     ws2.format(L"%S", L"01234567890123456789");
-    assertEquals ("format-7", L"01234567890123456789", ws2.c_str());
+    assertEquals ("format-11", L"01234567890123456789", ws2.c_str());
     assertTrue("overflow", ws2.isUsingOverflow());
 }
 
