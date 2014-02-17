@@ -124,7 +124,6 @@ void SimpleTest::assertEqualsBool (const char* msg, bool expected, bool actual) 
     }
 }
 
-
 void SimpleTest::assertFalse (const char* msg, bool v) {
     assertEqualsBool (msg, false, v);
 } 

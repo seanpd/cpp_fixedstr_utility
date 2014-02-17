@@ -472,6 +472,22 @@ void FixedStrTest::testFormat() {
     assertEquals ("format-4", "0123456789012", s1.c_str());
     assertTrue("overflow", s1.isUsingOverflow());
 
+    // existing overflow but needs realloc
+    s1.format("%s", "01234567890123");
+    assertEquals ("format-5", "01234567890123", s1.c_str());
+    assertTrue("overflow", s1.isUsingOverflow());
+
+    // fits in array , but for now it goes in overflow.
+    s1.format("%s", "abc");
+    assertEquals ("format-5", "abc", s1.c_str());
+    
+    // This should go in array.
+    s1.clear();
+    s1.format("%s", "abc");
+    assertEquals ("format-6", "abc", s1.c_str());
+    assertFalse("overflow", s1.isUsingOverflow());
+
+
 /*
     // wchar_t, at the limit
     WFixedStr<5> ws1;

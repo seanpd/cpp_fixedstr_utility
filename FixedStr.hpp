@@ -176,7 +176,7 @@ namespace {
         }
     }
 
-    inline void formatImpl (
+    inline bool formatImpl (
                     const char*     formatStr, 
                     va_list         *args,
                     size_t          alloc,
@@ -192,10 +192,9 @@ namespace {
                     unsigned int*   overflowAllocOut,
                     
                     unsigned int    overflowLenIn,
-                    unsigned int*   overflowlenOut,
-                    bool*           okOut) {
+                    unsigned int*   overflowlenOut){
 
-        *okOut = false;
+        // We'll try avail buffer (array or overflow)
         char*  buff;
         size_t buffAlloc;
         if (*len != -1) {
@@ -214,30 +213,74 @@ namespace {
         if (required < 0) {
             // error
             va_end (argsHold);
-            return;
+            return false;
         }
-        if (required <= alloc) {
+        if (required <= buffAlloc) {
             // it fit ok.
-            *len = required;
+            if (*len != -1) {
+                // went into existing array.
+                *len = required;
+            }
+            else {
+                // went into exising overflow.
+                *len = -1;
+                *overflowOut = overflowIn;
+                *overflowAllocOut = overflowAllocIn;
+                *overflowOut = overflowIn;
+                *overflowlenOut = required;
+            }
         }
         else {
             // It didn't fit.
             // This shouldn't be a common use case.
             // don't use asprintf() -- not standard.
-            if (*len == -1) delete [] overflowIn;
-            *overflowOut = new char[required+1];
-            *overflowAllocOut = required;
-            *overflowlenOut = required;
-            buff = *overflowOut;
-            int res = vsnprintf (buff, required+1, formatStr, argsHold);
+            char* overflowNew = new char[required+1];
+            int res = vsnprintf (overflowNew, required+1, formatStr, argsHold);
             if (res < 0) {
                 va_end (argsHold);
-                return;
+                delete [] overflowNew;
+                return false;
             }
+            if (*len == -1) delete [] overflowIn;
             *len = -1;
+            *overflowOut = overflowNew;
+            *overflowAllocOut = required;
+            *overflowlenOut = required;
         }
-        *okOut = true;
+        return true;
     }
+
+/*
+    inline bool wideFormatImpl (
+                    const wchar_t*     formatStr,
+                    va_list         *args,
+                    size_t          alloc,
+                    
+                    unsigned int*   len,
+                    
+                    wchar_t*        array,
+                    
+                    wchar_t*        overflowIn,
+                    wchar_t**       overflowOut,
+                    
+                    unsigned int    overflowAllocIn,
+                    unsigned int*   overflowAllocOut,
+                    
+                    unsigned int    overflowLenIn,
+                    unsigned int*   overflowlenOut){
+
+        wchar_t*  buff;
+        size_t buffAlloc;
+        if (*len != -1) {
+            buff =      array;
+            buffAlloc = alloc;
+        }
+        else {
+            buff =      overflowIn;
+            buffAlloc = overflowAllocIn;
+        }
+*/
+
 
 /**
     // returns new overflowAlloc.    
@@ -748,12 +791,11 @@ public:
     bool format (const char* formatStr, ...) {
         va_list args;
         va_start(args, formatStr);    
-        bool ok = false;            
         char*           overflowOut      = NULL;
         unsigned int    overflowAllocOut = 0;
         unsigned int    overflowLenOut   = 0;
 
-        formatImpl (
+        bool ok = formatImpl (
                         formatStr,
                         &args,
                         _AllocSizeT,
@@ -764,10 +806,9 @@ public:
                         this->m_overflowAlloc,
                         &overflowAllocOut,
                         this->m_overflowLen,
-                        &overflowLenOut,
-                        &ok);
+                        &overflowLenOut);
 
-        if (this->m_len == -1) {
+        if (ok && this->m_len == -1) {
             this->m_overflow =      overflowOut;
             this->m_overflowAlloc = overflowAllocOut;
             this->m_overflowLen =   overflowLenOut;
