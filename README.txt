@@ -1,4 +1,4 @@
-10-dec-2011
+16-feb-2014
 Sean Dempsey
 FixedStr utility C++ class
 
@@ -21,6 +21,7 @@ FixedStr<20>  myStr;
 WFixedStr<20> myWideCharStr;
 
 The unit test FixedStrTest.cpp has example usage.
+It has functions for copying, appending, printf-type formatting etc.
 
 Notes:
 
