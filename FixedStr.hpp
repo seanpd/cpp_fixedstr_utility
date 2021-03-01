@@ -878,7 +878,7 @@ template<size_t origAlloc1, size_t origAlloc2>
 bool operator<( const BaseStr<origAlloc1, wchar_t> &lhs,
                 const BaseStr<origAlloc2, wchar_t> &rhs)
 {
-    return isLessImpl<wchar_t, unsigned wchar_t> (
+    return isLessImpl<wchar_t, wchar_t> (
                 lhs.c_str(), lhs.length(),
                 rhs.c_str(), rhs.length());       
 }

@@ -8,9 +8,9 @@
  */
 
 #include "SimpleTest.h"
-#include <stdexcept>
 #include <string>
 #include <cstring>
+#include <stdexcept>
 
 using std::string;
 
@@ -90,9 +90,7 @@ void SimpleTest::assertEquals (const char* msg, const wchar_t* expected, const w
     errMsg += toNarrow(actual);
     errMsg += ">";
     fail(errMsg.c_str()); 
-
 }
-
 
 void SimpleTest::assertEquals (const char* msg, int expected, int actual) {
     if (expected != actual) {
